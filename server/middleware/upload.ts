@@ -8,7 +8,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../../uploads/resumes');
+// Use process.cwd() so paths are stable even if this repo is duplicated/moved
+const uploadsDir = path.resolve(process.cwd(), 'uploads', 'resumes');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }

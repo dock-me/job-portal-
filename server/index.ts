@@ -28,15 +28,32 @@ app.use(cors({
 app.use(express.json());
 
 // Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
+
+// Fail fast if MongoDB is down (avoid hanging buffered queries)
+mongoose.set('bufferCommands', false);
 
 // Connect to MongoDB
 const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/jobportal';
 console.log('Connecting to MongoDB:', mongoUri.substring(0, 50) + '...');
 
-mongoose.connect(mongoUri)
+mongoose
+  .connect(mongoUri, {
+    serverSelectionTimeoutMS: 5000,
+  })
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
+
+// Gate API routes on DB connectivity so requests don't hang
+app.use('/api', (req, res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      error:
+        'Database not connected. Check MONGODB_URI and that your MongoDB server is running.',
+    });
+  }
+  next();
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
